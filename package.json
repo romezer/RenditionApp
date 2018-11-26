@@ -13,10 +13,12 @@
     "body-parser": "^1.15.2",
     "crypto-js": "^3.1.6",
     "express": "^4.14.0",
+    "gridfs-stream": "^1.1.1",
     "jsonwebtoken": "^7.1.9",
     "lodash": "^4.17.11",
     "mongodb": "^2.2.5",
     "mongoose": "^4.5.9",
+    "multer": "^1.4.1",
     "validator": "^5.6.0"
   }
 }

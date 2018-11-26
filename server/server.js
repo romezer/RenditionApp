@@ -1,12 +1,27 @@
-var express = require('express');
-var bodyParser = require('body-parser');
+const express = require('express');
+const bodyParser = require('body-parser');
 const _ = require('lodash');
+
+ const multer  = require('multer');
+ const storage = multer.diskStorage({
+ 	destination: function(req, file, cb){
+ 		cb(null, 'uploads/');
+ 	},
+ 	filename: function(req, file, cb){
+ 		cb(null, file.originalname);
+ 	}
+ });
+ const upload = multer({ storage: storage});
+// var gridfs = require('gridfs-stream');
+// var fs = require('fs');
 
 var {mongoose} = require('./db/mongoose');
 var {Client} = require('./models/client');
 var {authenticate} = require('./middleware/authenticate');
+var {Document} = require('./models/document');
 
 var app = express();
+
 
 app.use(bodyParser.json());
 
@@ -19,7 +34,6 @@ app.post('/clients', (req,res) => {
 	client.save().then(() => {
 		return client.generateAuthToken();
 }).then((token) =>{
-	console.log('token',token);
 	res.header('x-auth',token).send(client);
 }).catch((e) => {
 		console.log('Error',e);
@@ -52,6 +66,33 @@ app.delete('/clients/me/token', authenticate, (req, res) => {
 		res.status(400).send();
 	});
 });
+
+
+
+app.post('/upload',authenticate, upload.single('file'), function (req, res, next) {
+	res.status(200).send();
+	
+});
+
+app.post('/docs/upload',authenticate, upload.array('docs', 4), function (req, res, next) {
+	var contentdoc = req.files[0].path;
+	var header = req.files[1].path;
+	var footer = req.files[2].path;
+	var signaturepage = req.files[3].path;
+
+	var document = new Document({
+		documentstate: req.body.documentstate,
+		documentid: req.body.documentid,
+		documents: [{ contentdoc,header,footer,signaturepage}]
+	});
+
+	document.save().then(() => {
+		res.status(200).send(document);
+	});
+})
+
+
+
 
 
 app.listen(3000, ()=> {
