@@ -2,8 +2,6 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const request = require('request');
 const fs = require('fs');
-var base64 = require('base-64');
-var utf8 = require('utf8');
 var jsforce = require('jsforce');
 
 var SFrequestSchema = mongoose.Schema({
@@ -25,6 +23,12 @@ var SFrequestSchema = mongoose.Schema({
 			minlength: 1,
 			trim: true,
 	 	},
+	 	url:{
+	 		type: String,
+			required: true,
+			minlength: 1,
+			trim: true,
+	 	},
 	
 	 token:{
 	 	type: String
@@ -33,7 +37,7 @@ var SFrequestSchema = mongoose.Schema({
 });
 
 
-SFrequestSchema.methods.salesforceAuth = function (username, password, contentversionid, filename){
+SFrequestSchema.methods.salesforceAuth = function (username, password, contentversionid, url){
 	var sfrequest = this;
 	var options = {
 	  method: 'POST',
@@ -52,88 +56,52 @@ function callback(error, response, body) {
 		    sfrequest.token = info.access_token;
 		    var token = info.access_token;
 		   return sfrequest.save().then(() => {
-		   		// return token;
-		   		sfrequest.getFile(token, contentversionid, 'https://dot-compliance-dev-ed.my.salesforce.com').then(() =>{
+		   		sfrequest.getFileWithSessionId(token, contentversionid, url).then((err) =>{
+		   			if(err){
+		   				console.log(err);
+		   			}
 		   			console.log('Saved!!!');
 		   		});
-		   	//	sfrequest.getcontentversion(token, contentversionid, filename);
 		   });
-		    
-		    
+	
 		  }else{
 		  	console.log('Error!',error);
 		  	console.log('status ',response.statusCode);
 		  }
-
-
-	
- 
 }
 request(options, callback);
 };
 
 
-SFrequestSchema.methods.getcontentversion = function (token, contentversionid, filename){
-	var sfrequest = this;
-	var options = {
-	  method: 'GET',
-  	  url: 'https://dot-compliance-dev-ed.my.salesforce.com/services/data/v40.0/sobjects/ContentVersion/' + contentversionid + '/VersionData',
-	  headers: {
-	    'Authorization': 'Bearer ' + token,
-	    'Access-Control-Allow-Origin':'*'
-	  } 
+
+SFrequestSchema.methods.getFileWithToken = (token, contentversionid, url) => {
+	return new Promise((resolve, reject) => {
+		 var conn = new jsforce.Connection({
+	  instanceUrl : url,
+	  accessToken : token
+	});
+		conn.query(`SELECT Id,Title,FileExtension, VersionData FROM ContentVersion WHERE Id = '${contentversionid}' LIMIT 1`  , function(err, res){
+	 	if(err){console.log(err);return reject(err)}
+		 	var fileOut  = fs.createWriteStream('uploads/' + res.records[0].Title + '.' + res.records[0].FileExtension);
+		 	conn.sobject('ContentVersion').record(res.records[0].Id).blob('VersionData').pipe(fileOut);
+		 	resolve();
+	 	});
+	});
 };
 
-function callback(error, response, body) {
-  if (!error && response.statusCode == 200) {
-  	// var fileOut  = fs.createWriteStream('uploads/' + filename);
-  	 var buf = new Buffer(body, 'binary').toString('base64');
-  	//	var buf = new Buffer(body,'base64');
-  	// var bytes = body.split('%');
-  	// var b = new Buffer(bytes.length);
-  	// var c = '';
-  	// for(var i = 0 ; i < bytes.length ; i ++){
-  	// 	c = c + bytes[i];
-  	// }
-  	// console.log(c);
-  	fs.writeFile('uploads/' + filename, buf, function(err){
-  		if(err){console.log(err);}
-  		console.log('Saved!');
-  	});
- 
-
-  }else{
-  	console.log('Error!',error);
-  	console.log('status ',response.statusCode);
-  }
-}
-request(options, callback);
-
-
-};
-
-SFrequestSchema.methods.getFile = (token, contentversionid, url) => {
-	// var conn = new jsforce.Connection();
- // 	conn.login('rom@dotdev.com', 'Comp20196WRRlMR31mhebC8c4rwKOjqr', function(err, res){
- // 	if(err){console.log(err);}
- // 	conn.query(`SELECT Id,Title,FileExtension, VersionData FROM ContentVersion WHERE Id = '${contentversionid}' LIMIT 1`  , function(err, res){
- // 	if(err){console.log(err);}
- // 	console.log(res);
- // 	console.log(res.records[0].Title + '.' + res.records[0].FileExtension);
-	//  	var fileOut  = fs.createWriteStream('uploads/' + res.records[0].Title + '.' + res.records[0].FileExtension);
-	//  	conn.sobject('ContentVersion').record(res.records[0].Id).blob('VersionData').pipe(fileOut);
- // 	});
- // });
-
- var conn = new jsforce.Connection({
-  instanceUrl : url,
-  accessToken : token
-});
-	conn.query(`SELECT Id,Title,FileExtension, VersionData FROM ContentVersion WHERE Id = '${contentversionid}' LIMIT 1`  , function(err, res){
- 	if(err){console.log(err);}
-	 	var fileOut  = fs.createWriteStream('uploads/' + res.records[0].Title + '.' + res.records[0].FileExtension);
-	 	conn.sobject('ContentVersion').record(res.records[0].Id).blob('VersionData').pipe(fileOut);
- 	});
+SFrequestSchema.methods.getFileWithSessionId = (token, contentversionid, url) => {
+	return new Promise((resolve, reject) => {
+		 var conn = new jsforce.Connection({
+	  serverUrl  : url,
+	  sessionId  : token
+	});
+		conn.query(`SELECT Id,Title,FileExtension, VersionData FROM ContentVersion WHERE Id = '${contentversionid}' LIMIT 1`  , function(err, res){
+	 	if(err){console.log(err);return reject(err)}
+		 	var fileOut  = fs.createWriteStream('uploads/' + res.records[0].Title + '.' + res.records[0].FileExtension);
+		 	conn.sobject('ContentVersion').record(res.records[0].Id).blob('VersionData').pipe(fileOut);
+		 	resolve();
+	 	});
+	});
 };
 
 

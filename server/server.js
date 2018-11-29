@@ -97,19 +97,17 @@ app.post('/sfrquest', (req, res) => {
 	var sfrequest = new SFrequest({
 		recordid: req.body.recordid,
 		contentversionid: req.body.contentversionid,
+		url: req.body.url,
 		filename: req.body.filename
 	});
 
 	sfrequest.save().then(() => {
-		//res.status(200).send(sfrequest);
-		//sfrequest.getcontentversion(token,  req.body.contentversionid);
-		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.filename);
+
+		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url);
+		// retuen sfrequest.getFileWithSessionId(req.body.sessionId, req.body.contentversionid, req.body.url); TODO
 		
 	}).then(() => {
 		res.status(200).send(sfrequest);
-		// console.log('salesforce token: ',token);
-		// res.header('sf-auth',token).send(sfrequest);
-		// //sfrequest.getcontentversion('00D24000000H3ci!ARAAQB.ydHkfQZ0Jttm6lu3GFJdhNI_W7dZXFTBIufU9KtqP9wCWNRLHXTOCfSxgZrZ.HntRkX4ayCbUD5B9gOQmRMlzdHxR',  req.body.contentversionid);
 	}).catch((e) => {
 		console.log('Error',e);
 		res.status(400).send(e);
