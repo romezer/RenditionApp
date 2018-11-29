@@ -19,6 +19,7 @@ var {mongoose} = require('./db/mongoose');
 var {Client} = require('./models/client');
 var {authenticate} = require('./middleware/authenticate');
 var {Document} = require('./models/document');
+var {SFrequest} = require('./models/sfrequest');
 
 var app = express();
 
@@ -89,8 +90,31 @@ app.post('/docs/upload',authenticate, upload.array('docs', 4), function (req, re
 	document.save().then(() => {
 		res.status(200).send(document);
 	});
-})
+});
 
+
+app.post('/sfrquest', (req, res) => {
+	var sfrequest = new SFrequest({
+		recordid: req.body.recordid,
+		contentversionid: req.body.contentversionid,
+		filename: req.body.filename
+	});
+
+	sfrequest.save().then(() => {
+		//res.status(200).send(sfrequest);
+		//sfrequest.getcontentversion(token,  req.body.contentversionid);
+		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.filename);
+		
+	}).then(() => {
+		res.status(200).send(sfrequest);
+		// console.log('salesforce token: ',token);
+		// res.header('sf-auth',token).send(sfrequest);
+		// //sfrequest.getcontentversion('00D24000000H3ci!ARAAQB.ydHkfQZ0Jttm6lu3GFJdhNI_W7dZXFTBIufU9KtqP9wCWNRLHXTOCfSxgZrZ.HntRkX4ayCbUD5B9gOQmRMlzdHxR',  req.body.contentversionid);
+	}).catch((e) => {
+		console.log('Error',e);
+		res.status(400).send(e);
+	});
+});
 
 
 
