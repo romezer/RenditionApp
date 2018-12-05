@@ -98,12 +98,14 @@ app.post('/sfrquest', (req, res) => {
 		recordid: req.body.recordid,
 		contentversionid: req.body.contentversionid,
 		url: req.body.url,
-		filename: req.body.filename
+		filename: req.body.filename,
+		fileExtension: req.body.fileextension
 	});
 
 	sfrequest.save().then(() => {
 
-		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url);
+		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension);
+		//sfrequest.getSignaturePage('00D24000000H3ci!ARAAQFgKXCCfmIiXObeIiq2t5jS7oXC3yg2aaHTCgg3Z7gUlHBnrbpg0cUdKOfJc0gRWGnuUR4uwIGpljmisBomj5JrkmcpC', req.body.contentversionid, 'Simple', 'Effective', '500;560');
 		// retuen sfrequest.getFileWithSessionId(req.body.sessionId, req.body.contentversionid, req.body.url); TODO
 		
 	}).then(() => {
@@ -112,6 +114,10 @@ app.post('/sfrquest', (req, res) => {
 		console.log('Error',e);
 		res.status(400).send(e);
 	});
+});
+
+app.get('/signaturepage', (req, res) => {
+	SFrequest.getSignaturePage(req.body.token, req.body.objid, req.body.recordtype, req.body.documentstate, req.body.pagesize);
 });
 
 
