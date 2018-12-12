@@ -9,8 +9,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "Set": "^0.4.1",
+    "asposepdfcloud": "^1.0.3",
     "asposestoragecloud": "^1.0.5",
     "asposewordscloud": "^18.9.0",
+    "assert": "^1.4.1",
     "base-64": "^0.1.0",
     "bcryptjs": "^2.3.0",
     "body-parser": "^1.15.2",

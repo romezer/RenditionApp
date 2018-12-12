@@ -95,16 +95,18 @@ app.post('/docs/upload',authenticate, upload.array('docs', 4), function (req, re
 
 app.post('/sfrquest', (req, res) => {
 	var sfrequest = new SFrequest({
-		recordid: req.body.recordid,
+		recordId: req.body.recordId,
 		contentversionid: req.body.contentversionid,
 		url: req.body.url,
 		filename: req.body.filename,
-		fileExtension: req.body.fileextension
+		fileExtension: req.body.fileextension,
+		documentState: req.body.documentState,
+		recordType: req.body.recordType
 	});
 
 	sfrequest.save().then(() => {
 
-		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension);
+		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType);
 		//sfrequest.getSignaturePage('00D24000000H3ci!ARAAQFgKXCCfmIiXObeIiq2t5jS7oXC3yg2aaHTCgg3Z7gUlHBnrbpg0cUdKOfJc0gRWGnuUR4uwIGpljmisBomj5JrkmcpC', req.body.contentversionid, 'Simple', 'Effective', '500;560');
 		// retuen sfrequest.getFileWithSessionId(req.body.sessionId, req.body.contentversionid, req.body.url); TODO
 		
