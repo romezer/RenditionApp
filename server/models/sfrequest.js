@@ -4,7 +4,7 @@ const request = require('request');
 const fs = require('fs');
 var jsforce = require('jsforce');
 var querystring = require("querystring");
-
+var async = require("async");
 
 var assert = require('assert');
 const { WordsApi, PostDocumentSaveAsRequest, SaveOptionsData } = require("asposewordscloud");
@@ -15,6 +15,8 @@ var config = {'appSid':'34613236-43e7-433a-b6d4-c8180930be7b','apiKey':'b233bab0
 var storageApi = new StorageApi(config);
 var  pdfApi = new PdfApi(config);
 var pagesObj = [];
+var templateArr= [];
+var pageIdToTeplateMap = [];
 var Set = require('Set');
 var sizeSet = new Set();
 
@@ -104,17 +106,20 @@ function callback(error, response, body) {
 		   												var totalPages = message;
 		   												sfrequest.addWaterMarkText(filename + '_merge.pdf', totalPages, documentState).then((message) => {
 		   													console.log('Success ', message);
-		   													sfrequest.getPageInfo(filename + '_merge.pdf', totalPages).then((message) => {
+		   													sfrequest.getPageInfo(filename + '_merge.pdf', totalPages, filename).then((message) => {
 		   														console.log('Success ', message);
-		   														// sfrequest.getTemplate(token, recordId, recordType, documentState, '500;560', url).then((message)=>{
-
-		   														// },(error) => {
-
-		   														// });
-
-
-		   														sfrequest.getAllTemplates(sizeSet, token, recordId, recordType, documentState, url).then((message)=> {
+		   														sfrequest.getAllTemplates(sizeSet, token, recordId, recordType, documentState, url, filename).then((message)=> {
 		   															console.log('Success getAllTemplates ', message);
+		   															sfrequest.uploadTemplates('34613236-43e7-433a-b6d4-c8180930be7b','b233bab04dd42804b609510ad3f067aa',templateArr).then((message) =>{
+		   																console.log('Success upload teplates ', message);
+		   																sfrequest.addTepmlatesStamp(filename, pageIdToTeplateMap.length , pageIdToTeplateMap).then((message) => {
+		   																	console.log('Success: ' + message);
+		   																}, (error) => {
+		   																	console.log('addTepmlatesStamp error: ' + error);
+		   																})
+		   															}, (error) => {
+		   																console.log('Error upload templates ', error);
+		   															})
 		   														},(error)=> {
 		   															console.log('Error getAllTemplates ', error );
 		   														});
@@ -258,14 +263,52 @@ SFrequestSchema.methods.getTemplate = (token, objid, recordType, documentState, 
 	});
 }
 
-SFrequestSchema.methods.getAllTemplates = (sizeSet, token, objid, recordType, documentState, uri) => {
+ function foo(token, objid, recordType, documentState, pageSize, uri, filename){
 	return new Promise((resolve, reject) => {
-		console.log('getAllTemplates start');
+		var options = {
+		  method: 'GET',
+	  	  url: `${uri}/services/apexrest/CompSuite/getTemplate?recordType=${recordType}&objid=${objid}
+	  	  &pageSize=${pageSize}&documentState=${documentState}`,
+		  headers: {
+		    'Content-Type': 'application/json',
+		    'Authorization': 'Bearer ' + token,
+		    'Access-Control-Allow-Origin': '*'
+		  }
+		};
+
+		function callback(error, response, body) {
+			 if (!error && response.statusCode == 200) {
+			 	fs.writeFileSync('uploads/' + filename + '_' + pageSize + '.pdf', body,'base64');
+			 	templateArr.push(filename + '_' + pageSize + '.pdf');
+    			resolve(1);
+			 }else{
+			 	return reject(error);
+			 }
+		}
+		request(options, callback);
+	});
+}
+
+SFrequestSchema.methods.getAllTemplates = (sizeSet, token, objid, recordType, documentState, uri, filename) => {
+	return new Promise((resolve, reject) => {
+		console.log('filename: ' ,filename);
 		console.log('getAllTemplates sizeSet: ' + JSON.stringify(sizeSet));
-		for(var i = 0 ; i < sizeSet.size() ; i ++){
-			console.log('getAllTemplates iterate: ' + i);
-			sfrequest.getTemplate(token, objid, recordType, documentState, sizeSet[i], uri).then((message) => {
-			revolve('Template ' + i + 'Saved');
+		var counter = 0;
+		var setString = sizeSet.toString();
+		var setPureSize = setString.substring(1,setString.length - 1);
+		var setArr = setPureSize.split(',');
+		console.log('getAllTemplates setArr: ' + setArr);
+		for(var k = 0 ; k < setArr.length ; k ++){
+			let ii = k;
+			console.log('getAllTemplates iterate page size: ' + setArr[k]);
+
+			foo(token, objid, recordType, documentState, setArr[k], uri, filename).then((message) => {
+			console.log(message + ': ' + ii);
+			counter = counter + message;
+			console.log('counter: ' + counter);
+			if(counter === setArr.length){
+				resolve('All templates saved');
+			}
 			}, (error) => {
 				return reject(error);
 			});
@@ -326,6 +369,31 @@ SFrequestSchema.methods.uploadFileToAspose = (appSid, appKey, outFolder, filenam
 
 		});
 		
+}
+
+SFrequestSchema.methods.uploadTemplates = (appSid, appKey, templateArr) => {
+	return new Promise((resolve, reject) => {
+		var AppSID = appSid;
+		var AppKey = appKey;
+		var count = 0;
+		for(var j = 0 ; j < templateArr.length ; j++){
+			try{
+				storageApi.PutCreate(templateArr[j], versionId=null, storage=null, file= 'uploads/' + templateArr[j] , function(responseMessage) {
+					if(responseMessage.code === 401){
+					var err = 'Upload error';
+						return reject(err);
+				}
+				 count ++;
+				 console.log('count: ' + count);
+				if(count === templateArr.length - 1){
+					resolve('All templates uploaded');
+				}
+				});
+			}catch(e){
+				return reject(e);
+			}
+		}
+	});
 }
 
 
@@ -433,22 +501,142 @@ SFrequestSchema.methods.addWaterMarkText = (name, totalPages, documentSatet) => 
 		  },
 			};
 		try{
-			for(var i = 1 ; i <= totalPages ; i ++){
-			console.log('Iteration: ' + i);
-			pdfApi.PutPageAddStamp(name, i, null, null, stampBody, function(responseMessage) {
-				// console.log('Water mark text status: ' + JSON.stringify(responseMessage));
-			});
-		}
-			resolve('Water mark text added');
+			var watermarkCounter = 0;
+			let tempPages = totalPages;
+			var pages = [1,2];
+
+			for(var i = 1 ; i <= tempPages ; i ++){
+				let ii = i;
+				setTimeout(function(){ 
+					pdfApi.PutPageAddStamp(name, ii, null, null, stampBody, function(responseMessage) {
+						console.log('responseMessage', responseMessage);
+						assert.equal(responseMessage.status, 'OK');
+						console.log('responseMessage.status',responseMessage.status);
+						if(ii === tempPages){
+			 				resolve('Water mark text added');
+			 			}
+					}); 
+				}, 1000*ii);
+			}
+			
+
+			
+
+
+
+			// async.each(pages, function(p, callback){
+			// 		console.log('p',p);
+			// 	  	pdfApi.PutPageAddStamp(name, p, null, null, stampBody, function(responseMessage) {
+			// 	  		if(responseMessage.status != 'OK'){
+			// 	  			callback('Somthing went wrong');
+			// 	  		}
+			// 			watermarkCounter ++;
+			// 			console.log('watermarkCounter: ' + watermarkCounter);
+			// 			if(watermarkCounter === tempPages){
+			// 				resolve('Water mark text added');
+			// 				callback();
+			// 			}
+			// 		});
+			// });
+
+		// 	for(var i = 1 ; i <= tempPages ; i ++){
+		// 		console.log('Iteration: ' + i);
+		// 		pdfApi.PutPageAddStamp(name, i, null, null, stampBody, function(responseMessage) {
+		// 		assert.equal(responseMessage.status, 'OK');
+		// 		watermarkCounter ++;
+		// 		console.log('watermarkCounter: ' + watermarkCounter);
+		// 		if(watermarkCounter === tempPages){
+		// 			resolve('Water mark text added');
+		// 		}
+		// 	});
+		// }
+			//resolve('Water mark text added');
 		}catch(e){
 			return reject(e);
 		}
 		
 
 	});
+
 }
 
-SFrequestSchema.methods.getPageInfo = (name, totalPages) => {
+SFrequestSchema.methods.addTepmlatesStamp = (fileName, totalPages , pageIdToTeplateMap) => {
+	return new Promise((resolve, reject) => {
+		console.log('pageIdToTeplateMap: ' + JSON.stringify(pageIdToTeplateMap));
+		console.log('fileName: ' + fileName);
+		try{
+			var pageStampCounter = 0;
+			for(var i = 1 ; i <= totalPages ; i ++){
+				let ii = i;
+				for(var j = 0 ; j < pageIdToTeplateMap.length ; j ++){
+					let jj = j;
+					console.log('compare: ' + ' ii = ' + ii + ' pageIdToTeplateMap[jj].page = ' + pageIdToTeplateMap[jj].page);
+					if(ii === pageIdToTeplateMap[jj].page){
+						console.log('pageIdToTeplateMap[j]',pageIdToTeplateMap[jj]);
+						
+						setTimeout(function(){
+							var template = pageIdToTeplateMap[jj].teplate;
+							console.log('template',template);
+							var stampBody = {
+											'Background' : false,
+											'Type' : 'Page',
+											'PageIndex': 1,
+											'YIndent': 10,
+											'FileName' : template + '.pdf'
+										}
+						console.log('stampBody: ' + JSON.stringify(stampBody));
+							console.log('page num: ' + ii);
+							pdfApi.PutPageAddStamp(fileName + '_merge.pdf', ii, null, null, stampBody, function(responseMessage) {
+								console.log('$$$responseMessage.status: ' + responseMessage.status);
+								assert.equal(responseMessage.status, 'OK');
+								pageStampCounter ++;
+								console.log('pageStampCounter: ' + pageStampCounter);
+								if(pageStampCounter === totalPages){
+									resolve('All template stamp added');
+								}
+							});
+						},1000*ii)
+
+						
+
+
+
+							
+
+						
+					    
+						
+
+
+
+					}
+				}
+			}
+		}catch(e){
+			return reject(e);
+		}
+	});
+}
+
+// function addSingleTemplate(fileName, stampBody, page, totalPages){
+// 	return new Promise((resolve, reject) => {
+// 		try{
+// 			pdfApi.PutPageAddStamp(fileName + '_merge.pdf', i, null, null, stampBody, function(responseMessage) {
+// 				if(page === totalPages){
+// 					resolve('All template stamp added');
+// 				}
+// 		});
+// 		}catch(e){
+// 			return reject(e);
+// 		}
+		
+// 	});
+	
+// }
+
+
+
+SFrequestSchema.methods.getPageInfo = (name, totalPages, filename) => {
 	return new Promise((resolve, reject) => {
 		console.log('getPageInfo totalPages: ' + totalPages);
 		try{
@@ -456,20 +644,27 @@ SFrequestSchema.methods.getPageInfo = (name, totalPages) => {
 				pdfApi.GetPage(name, j, null, null, function(responseMessage) {
 				//console.log(j + ' Page status:' + ' Width:' + responseMessage.body.Page.Rectangle.Width + ' Height: ' + responseMessage.body.Page.Rectangle.Height);	
 				var temp = { page: responseMessage.body.Page.Id,
-				 			 Width: responseMessage.body.Page.Rectangle.Width,
-				 			 Height: responseMessage.body.Page.Rectangle.Height};
+							 size: responseMessage.body.Page.Rectangle.Width + ';' + responseMessage.body.Page.Rectangle.Height
+				 			 };
 				// console.log('temp: ' + JSON.stringify(temp));
 				pagesObj.push(temp);
+				var temp2 = {page: responseMessage.body.Page.Id,
+							teplate: filename + '_' + responseMessage.body.Page.Rectangle.Width + ';' + responseMessage.body.Page.Rectangle.Height}
+				pageIdToTeplateMap.push(temp2);
 				var sizes = responseMessage.body.Page.Rectangle.Width +';' + responseMessage.body.Page.Rectangle.Height;
 				sizeSet.add(sizes);
-				// console.log('pagesObj: ' + JSON.stringify(pagesObj));
-				// console.log('sizeSet: ' + JSON.stringify(sizeSet));
-				});	
-				if(totalPages == pagesObj.length){
-
+				 console.log('pagesObj: ' + JSON.stringify(pagesObj));
+				 console.log('sizeSet: ' + JSON.stringify(sizeSet));
+				if(pagesObj.length === totalPages){
+					resolve('Page Info done');
 				}
+
+
+				});	
+				
+				
 			}
-			resolve('Page Info done');
+			
 			
 			
 		}catch(e){
