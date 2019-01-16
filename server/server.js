@@ -104,24 +104,50 @@ app.post('/sfrquest', (req, res) => {
 		recordType: req.body.recordType
 	});
 
+	// sfrequest.save().then(() => {
+	// 	sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType).then((message) =>{
+	// 		console.log('Proccess finished');
+	// 		res.status(200).send(message);
+	// 	},(error) =>{
+	// 		console.log('Error',error);
+	// 		res.status(401).send(error);
+	// 	});
+
+	// }).catch(e) => {
+	// 	console.log('Error',e);
+	// 	res.status(400).send(e);
+	// };
+
 	sfrequest.save().then(() => {
 
-		return sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType);
-		//sfrequest.getSignaturePage('00D24000000H3ci!ARAAQFgKXCCfmIiXObeIiq2t5jS7oXC3yg2aaHTCgg3Z7gUlHBnrbpg0cUdKOfJc0gRWGnuUR4uwIGpljmisBomj5JrkmcpC', req.body.contentversionid, 'Simple', 'Effective', '500;560');
-		// retuen sfrequest.getFileWithSessionId(req.body.sessionId, req.body.contentversionid, req.body.url); TODO
+		sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType).then((message) => {
+			console.log('Success message: ' + message);
+			res.status(200).send(sfrequest);
+		}, (error) =>{
+			console.log('Server Error: ' + error);
+			res.status(400).send(error);
+		});
 		
 	}).then(() => {
-		res.status(200).send(sfrequest);
+		// res.status(200).send(sfrequest);
 	}).catch((e) => {
 		console.log('Error',e);
 		res.status(400).send(e);
 	});
 });
 
-app.get('/signaturepage', (req, res) => {
-	SFrequest.getSignaturePage(req.body.token, req.body.objid, req.body.recordtype, req.body.documentstate, req.body.pagesize);
-});
 
+// 	sfrequest.save().then(() => {
+
+// 		sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType);
+		
+// 	}).then(() => {
+// 		res.status(200).send(sfrequest);
+// 	}).catch((e) => {
+// 		console.log('Error',e);
+// 		res.status(400).send(e);
+// 	});
+// });
 
 
 
