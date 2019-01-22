@@ -120,7 +120,7 @@ app.post('/sfrquest', (req, res) => {
 
 	sfrequest.save().then(() => {
 
-		sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType).then((message) => {
+		sfrequest.salesforceAuth(req.body.usernamne, req.body.password, req.body.contentversionid,  req.body.url, req.body.filename, req.body.fileextension, req.body.documentState, req.body.recordId, req.body.recordType, req.body.appKey, req.body.appSid).then((message) => {
 			console.log('Success message: ' + message);
 			res.status(200).send(sfrequest);
 		}, (error) =>{

@@ -10,10 +10,12 @@
 		const { WordsApi, PostDocumentSaveAsRequest, SaveOptionsData } = require("asposewordscloud");
 		var StorageApi = require('asposestoragecloud');
 		var  PdfApi  = require("asposepdfcloud");
-		var config = {'appSid':'34613236-43e7-433a-b6d4-c8180930be7b','apiKey':'b233bab04dd42804b609510ad3f067aa' , 'debug' : true};
+		// var config = {'appSid':'34613236-43e7-433a-b6d4-c8180930be7b','apiKey':'b233bab04dd42804b609510ad3f067aa' , 'debug' : true};
 
-		var storageApi = new StorageApi(config);
-		var  pdfApi = new PdfApi(config);
+		// var storageApi = new StorageApi(config);
+		// var  pdfApi = new PdfApi(config);
+		var storageApi;
+		var  pdfApi;
 		var pagesObj = [];
 		var templateArr= [];
 		var pageIdToTeplateMap = [];
@@ -69,7 +71,17 @@
 		});
 
 
-		SFrequestSchema.methods.salesforceAuth = function (username, password, contentversionid, url, filename, fileextension, documentState, recordId, recordType){
+		SFrequestSchema.methods.salesforceAuth = function (username, password, contentversionid, url, filename, fileextension, documentState, recordId, recordType, appKey, appSid){
+			
+			var config = {'appSid':appSid,'apiKey':appKey , 'debug' : true};
+			 storageApi = new StorageApi(config);
+			  pdfApi = new PdfApi(config);
+
+
+			 pagesObj = [];
+			 templateArr= [];
+			 pageIdToTeplateMap = [];
+			 sizeSet = new Set();
 			return new Promise((resolve, reject) => {
 				var sfrequest = this;
 			var options = {
@@ -94,11 +106,11 @@
 				   				console.log('Success ', message);
 				   				sfrequest.getSignaturePage(token, recordId, recordType, documentState, '500;560', filename).then((message) =>{
 				   						console.log('Success ', message);
-				   						sfrequest.uploadFileToAspose('34613236-43e7-433a-b6d4-c8180930be7b','b233bab04dd42804b609510ad3f067aa','uploads/', filename, fileextension).then((message) =>{
+				   						sfrequest.uploadFileToAspose(appSid,appKey,'uploads/', filename, fileextension).then((message) =>{
 				   								console.log('Success ', message);
-				   							 	sfrequest.convetWordToPdf('34613236-43e7-433a-b6d4-c8180930be7b','b233bab04dd42804b609510ad3f067aa', filename, fileextension).then((message) => {
+				   							 	sfrequest.convetWordToPdf(appSid,appKey, filename, fileextension).then((message) => {
 				   							 		console.log('Success ', message);
-				   									sfrequest.uploadFileToAspose('34613236-43e7-433a-b6d4-c8180930be7b','b233bab04dd42804b609510ad3f067aa','uploads/', filename + '_sign' , 'pdf').then((message) => {
+				   									sfrequest.uploadFileToAspose(appSid,appKey,'uploads/', filename + '_sign' , 'pdf').then((message) => {
 				   										console.log('Success ', message);
 				   										sfrequest.mergeFiles(filename + '_merge.pdf', filename + '.pdf', filename + '_sign.pdf','uploads/').then((message) =>{
 				   											console.log('Success merging', message);
@@ -109,7 +121,7 @@
 				   														console.log('Success ', message);
 				   														sfrequest.getAllTemplates(sizeSet, token, recordId, recordType, documentState, url, filename).then((message)=> {
 				   															console.log('Success getAllTemplates ', message);
-				   															sfrequest.uploadTemplates('34613236-43e7-433a-b6d4-c8180930be7b','b233bab04dd42804b609510ad3f067aa',templateArr).then((message) =>{
+				   															sfrequest.uploadTemplates(appSid,appKey,templateArr).then((message) =>{
 				   																console.log('Success upload teplates ', message);
 				   																sfrequest.addWaterMarkToTemplates(templateArr, documentState).then((message) => {
 				   																	console.log('addWaterMarkToTemplates success: ' + message);
@@ -876,7 +888,7 @@
 
 		SFrequestSchema.methods.deleteServerFiles = (fileName, fileExtention, templateArr) =>{
 			return new Promise((resolve, reject) => {
-
+				console.log('*** templateArr *** ' + templateArr);
 				fs.unlink('uploads/' + fileName + '.' + fileExtention, (err) => {
 				  if (err){
 				  	return reject(err);
@@ -887,8 +899,8 @@
 				  if (err){
 				  	return reject(err);
 				  }
-				});
 
+				});
 				fs.unlink('uploads/' + fileName + '_sign.pdf', (err) => {
 				  if (err){
 				  	return reject(err);
@@ -897,37 +909,32 @@
 
 				for(var i = 0 ; i < templateArr.length ; i ++){
 					let ii = i;
-
+					console.log('deleting: ' + templateArr[ii]);
 					fs.unlink('uploads/' +  templateArr[ii], (err) => {
 					  if (err){
 					  	return reject(err);
 					  }
+					  templateArr[ii] ='';
 					  if(ii === templateArr.length - 1){
-					  	pagesObj = [];
-						sizeSet = new Set();
-						templateArr = [];
-						pageIdToTeplateMap = [];
+					  
 						resolve('All server files deleted');
 						}
 						});
 
-					
-					// setTimeout(function(){
-					// 	fs.unlink('uploads/' +  templateArr[ii], (err) => {
+
+					//  setTimeout(function(){
+					// 	fs.unlink('uploads/' +  fileName + '_merge.pdf', (err) => {
 					//   if (err){
 					//   	return reject(err);
 					//   }
-					//   if(ii === templateArr.length - 1){
-					//   	pagesObj = [];
-					// 	sizeSet = new Set();
-					// 	templateArr = [];
-					// 	pageIdToTeplateMap = [];
-					// 	resolve('All server files deleted');
-					// 	}
+					//   else{
+					//   	resolve('All server files deleted');
+					//   }
+					  
 					// 	});
 
 
-					// },ii*1000);
+					// },3000);
 
 
 					
@@ -935,7 +942,7 @@
 
 
 			});
-
+						
 
 		}
 
