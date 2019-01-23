@@ -62,6 +62,10 @@ app.get('/clients/me', authenticate,  (req,res) => {
 	res.send(req.client);
 });
 
+app.get('/',(req,res) => {
+	res.send();
+});
+
 app.delete('/clients/me/token', authenticate, (req, res) => {
 	req.client.removeToken(req.token).then(() =>{
 		res.status(200).send();
