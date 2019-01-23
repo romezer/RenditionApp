@@ -73,11 +73,9 @@
 
 		SFrequestSchema.methods.salesforceAuth = function (username, password, contentversionid, url, filename, fileextension, documentState, recordId, recordType, appKey, appSid){
 			
-			var config = {'appSid':appSid,'apiKey':appKey , 'debug' : true};
+			 var config = {'appSid':appSid,'apiKey':appKey , 'debug' : true};
 			 storageApi = new StorageApi(config);
-			  pdfApi = new PdfApi(config);
-
-
+			 pdfApi = new PdfApi(config);
 			 pagesObj = [];
 			 templateArr= [];
 			 pageIdToTeplateMap = [];

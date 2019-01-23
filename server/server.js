@@ -2,6 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
 
+const port = process.env.PORT || 3000;
+
  const multer  = require('multer');
  const storage = multer.diskStorage({
  	destination: function(req, file, cb){
@@ -151,6 +153,6 @@ app.post('/sfrquest', (req, res) => {
 
 
 
-app.listen(3000, ()=> {
-	console.log('Started on port 3000');
+app.listen(port, ()=> {
+	console.log(`Started on port ${port}`);
 });
